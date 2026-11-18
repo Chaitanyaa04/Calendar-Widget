@@ -25,14 +25,16 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Show repo layout
-        run: ls -R | head -50
-
       - name: Build debug APK
-        run: gradle assembleDebug --stacktrace
+        run: |
+          ls -R | head -40
+          F=$(find . -name settings.gradle.kts | head -1)
+          echo "Found project file: $F"
+          cd "$(dirname "$F")"
+          gradle assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: CalWidget-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: "**/build/outputs/apk/debug/*.apk"

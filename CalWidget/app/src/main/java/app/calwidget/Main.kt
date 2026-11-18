@@ -1,5 +1,6 @@
 package app.calwidget
 
+import android.view.ViewGroup
 import android.app.*
 import android.app.job.*
 import android.appwidget.AppWidgetManager

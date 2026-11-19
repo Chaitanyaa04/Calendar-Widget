@@ -1,0 +1,35 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.READ_CALENDAR"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <queries><package android:name="com.cron.calendar"/></queries>
+    <application android:label="Calendar Widget" android:icon="@mipmap/ic_launcher"
+        android:theme="@android:style/Theme.DeviceDefault">
+        <activity android:name=".SettingsActivity" android:exported="true">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+        </activity>
+        <activity android:name=".Month" android:exported="false" android:theme="@android:style/Theme.DeviceDefault.Dialog"/>
+        <activity android:name=".Open" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar"/>
+        <receiver android:name=".CalWidget" android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+                <action android:name="app.calwidget.REFRESH"/>
+                <action android:name="android.intent.action.DATE_CHANGED"/>
+                <action android:name="android.intent.action.TIME_SET"/>
+                <action android:name="android.intent.action.TIMEZONE_CHANGED"/>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_info"/>
+        </receiver>
+        <receiver android:name=".Remind" android:exported="false"/>
+        <receiver android:name=".MorningRx" android:exported="false"/>
+        <receiver android:name=".NextWidget" android:exported="true" android:label="Next event">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/next_info"/>
+        </receiver>
+        <service android:name=".ListService" android:permission="android.permission.BIND_REMOTEVIEWS"/>
+        <service android:name=".ChangeJob" android:permission="android.permission.BIND_JOB_SERVICE"/>
+    </application>
+</manifest>

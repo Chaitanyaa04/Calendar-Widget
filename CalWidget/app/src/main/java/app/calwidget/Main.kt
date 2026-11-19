@@ -31,7 +31,7 @@ import java.util.*
 
 private val DEF = mapOf(
     "bg" to 0xFF000000.toInt(), "title" to 0xFFE6E6E6.toInt(), "sub" to 0xFFBDBDBD.toInt(), "acc" to 0xFFFF4081.toInt(),
-    "size" to 20, "bopa" to 14, "round" to 1, "gap" to 3, "tap" to 0, "icons" to 1, "ended" to 1, "dfmt" to 0, "app" to 0, "rem" to 0, "lead" to 1, "auto" to 0, "live" to 0, "lint" to 1, "kwc" to 1, "sumr" to 1, "free" to 1, "freemin" to 60, "dayp" to 1, "wake" to 6, "sleep" to 23, "font" to 0, "dtap" to 1, "morn" to 0, "mornh" to 7, "pin" to 1, "days" to 7, "tfmt" to 0, "tlab" to 0, "nbh" to 2, "nbr" to 0, "nbc" to 0, "nbcc" to 0xFFFFFFFF.toInt(), "nstyle" to 1, "ncol" to 0, "npct" to 1, "nnext" to 1, "nprio" to 1, "nlock" to 1, "h24" to 0, "bar" to 1, "prog" to 1
+    "size" to 20, "bopa" to 14, "round" to 1, "gap" to 3, "tap" to 0, "icons" to 1, "ended" to 1, "dfmt" to 0, "app" to 0, "rem" to 0, "lead" to 1, "auto" to 0, "live" to 0, "lint" to 1, "kwc" to 1, "sumr" to 1, "free" to 1, "freemin" to 60, "dayp" to 1, "wake" to 6, "sleep" to 23, "font" to 0, "dtap" to 1, "morn" to 0, "mornh" to 7, "pin" to 1, "days" to 7, "tfmt" to 0, "tlab" to 0, "nbh" to 2, "nbhc" to 2, "nbr" to 0, "nbc" to 0, "nbcc" to 0xFFFFFFFF.toInt(), "nstyle" to 1, "ncol" to 0, "npct" to 1, "nnext" to 1, "nprio" to 1, "nlock" to 1, "h24" to 0, "bar" to 1, "prog" to 1
 )
 
 val WIDGETS = intArrayOf(R.layout.widget, R.layout.widget_f1, R.layout.widget_f2, R.layout.widget_f3, R.layout.widget_f4)
@@ -313,7 +313,7 @@ object Live {
         val bgc = when (mode) { 1 -> evCol; 2 -> p.i("acc") or 0xFF000000.toInt(); else -> 0xFF1C1C21.toInt() }
         var barCol = (when (p.i("nbc")) { 0 -> p.i("acc"); 1 -> evCol; 3 -> p.i("nbcc"); else -> Color.WHITE }) or 0xFF000000.toInt()
         if (barCol == bgc) barCol = Color.WHITE
-        val hDp = intArrayOf(4, 8, 12, 16)[p.i("nbh")]; val tf = p.i("tfmt"); val lab = p.i("tlab")
+        val hDp = intArrayOf(4, 8, 12, 16)[p.i("nbh")]; val hc = intArrayOf(10, 14, 18, 20)[p.i("nbhc")]; val tf = p.i("tfmt"); val lab = p.i("tlab")
         val soft = 0xCCFFFFFF.toInt()
         val range = "${Repo.time(e.start, h24)} - ${Repo.time(e.end, h24)}"
         fun paint(r: RemoteViews, big: Boolean) {
@@ -326,7 +326,7 @@ object Live {
                 r.setChronometerCountDown(R.id.nb_c, true); r.setTextColor(R.id.nb_c, Color.WHITE)
             } else { r.setTextViewText(R.id.nb_r, Repo.remain(e.end - now, tf, lab)); r.setTextColor(R.id.nb_r, Color.WHITE) }
             r.setViewVisibility(R.id.nb_row, if (showBar) View.VISIBLE else View.GONE)
-            r.bar2(R.id.nb_btrack, R.id.nb_bfill, pct, 0x55FFFFFF, barCol, p.i("nbr"), R.id.nb_bar, hDp)
+            r.bar2(R.id.nb_btrack, R.id.nb_bfill, pct, 0x66FFFFFF, barCol, p.i("nbr"), R.id.nb_bar, if (big) hDp else hc)
             r.setViewVisibility(R.id.nb_p, if (p.i("npct") == 1) View.VISIBLE else View.GONE)
             r.setTextViewText(R.id.nb_p, "$pct%"); r.setTextColor(R.id.nb_p, Color.WHITE)
             if (big) {

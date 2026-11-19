@@ -1,13 +1,13 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content">
     <ImageView android:id="@+id/nb_bg" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:src="@drawable/blk2"/>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingLeft="14dp" android:paddingRight="14dp" android:paddingTop="10dp" android:paddingBottom="10dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingLeft="14dp" android:paddingRight="14dp" android:paddingTop="8dp" android:paddingBottom="8dp">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
             <TextView android:id="@+id/nb_t" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:textSize="15sp" android:textStyle="bold" android:singleLine="true"/>
             <Chronometer android:id="@+id/nb_c" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="15sp" android:textStyle="bold"/>
             <TextView android:id="@+id/nb_r" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="15sp" android:textStyle="bold" android:visibility="gone"/>
         </LinearLayout>
-        <LinearLayout android:id="@+id/nb_row" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:gravity="center_vertical">
-            <FrameLayout android:id="@+id/nb_bar" android:layout_width="0dp" android:layout_weight="1" android:layout_height="12dp">
+        <LinearLayout android:id="@+id/nb_row" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:gravity="center_vertical">
+            <FrameLayout android:id="@+id/nb_bar" android:layout_width="0dp" android:layout_weight="1" android:layout_height="16dp">
                 <ImageView android:id="@+id/nb_btrack" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:src="@drawable/pill"/>
                 <ImageView android:id="@+id/nb_bfill" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:src="@drawable/clip_pill"/>
             </FrameLayout>

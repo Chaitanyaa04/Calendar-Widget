@@ -6,7 +6,7 @@
         <Chronometer android:id="@+id/nb_c" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textSize="28sp" android:textStyle="bold"/>
         <TextView android:id="@+id/nb_r" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textSize="28sp" android:textStyle="bold" android:visibility="gone"/>
         <LinearLayout android:id="@+id/nb_row" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:gravity="center_vertical">
-            <FrameLayout android:id="@+id/nb_bar" android:layout_width="0dp" android:layout_weight="1" android:layout_height="12dp">
+            <FrameLayout android:id="@+id/nb_bar" android:layout_width="0dp" android:layout_weight="1" android:layout_height="14dp">
                 <ImageView android:id="@+id/nb_btrack" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:src="@drawable/pill"/>
                 <ImageView android:id="@+id/nb_bfill" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:src="@drawable/clip_pill"/>
             </FrameLayout>

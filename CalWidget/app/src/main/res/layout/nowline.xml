@@ -1,0 +1,3 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="4dp" android:paddingBottom="4dp">
+    <FrameLayout android:id="@+id/line" android:layout_width="match_parent" android:layout_height="2dp"/>
+</FrameLayout>

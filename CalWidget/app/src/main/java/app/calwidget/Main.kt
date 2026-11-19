@@ -31,7 +31,7 @@ import java.util.*
 
 private val DEF = mapOf(
     "bg" to 0xFF000000.toInt(), "title" to 0xFFE6E6E6.toInt(), "sub" to 0xFFBDBDBD.toInt(), "acc" to 0xFFFF4081.toInt(),
-    "size" to 20, "bopa" to 14, "round" to 1, "gap" to 3, "tap" to 0, "icons" to 1, "ended" to 1, "dfmt" to 0, "app" to 0, "rem" to 0, "lead" to 1, "auto" to 0, "live" to 0, "lint" to 1, "kwc" to 1, "sumr" to 1, "free" to 1, "freemin" to 60, "dayp" to 1, "wake" to 6, "sleep" to 23, "font" to 0, "dtap" to 1, "morn" to 0, "mornh" to 7, "pin" to 1, "days" to 7, "nstyle" to 1, "ncol" to 0, "npct" to 1, "nnext" to 1, "nprio" to 1, "nlock" to 1, "h24" to 0, "bar" to 1, "prog" to 1
+    "size" to 20, "bopa" to 14, "round" to 1, "gap" to 3, "tap" to 0, "icons" to 1, "ended" to 1, "dfmt" to 0, "app" to 0, "rem" to 0, "lead" to 1, "auto" to 0, "live" to 0, "lint" to 1, "kwc" to 1, "sumr" to 1, "free" to 1, "freemin" to 60, "dayp" to 1, "wake" to 6, "sleep" to 23, "font" to 0, "dtap" to 1, "morn" to 0, "mornh" to 7, "pin" to 1, "days" to 7, "tfmt" to 0, "tlab" to 0, "nbh" to 2, "nbr" to 0, "nbc" to 0, "nbcc" to 0xFFFFFFFF.toInt(), "nstyle" to 1, "ncol" to 0, "npct" to 1, "nnext" to 1, "nprio" to 1, "nlock" to 1, "h24" to 0, "bar" to 1, "prog" to 1
 )
 
 val WIDGETS = intArrayOf(R.layout.widget, R.layout.widget_f1, R.layout.widget_f2, R.layout.widget_f3, R.layout.widget_f4)
@@ -133,6 +133,11 @@ object Repo {
         }
         return if (dEnd - cur >= need) cur to dEnd else null
     }
+    fun remain(ms: Long, fmt: Int, lab: Int): String {
+        val m = maxOf(ms, 0L) / 60000; val h = m / 60; val mm = m % 60
+        val core = if (fmt == 2) String.format("%02d:%02d", h, mm) else if (h > 0) "${h}h ${mm}m" else "${mm}m"
+        return core + arrayOf(" left", " remaining", "")[lab]
+    }
     fun fmt(ms: Long): String { val m = ms / 60000; return when { m >= 1440 -> "${m / 1440}d"; m >= 60 -> "${m / 60}h" + (if (m % 60 > 0) "${m % 60}m" else ""); else -> "${maxOf(m, 1)}m" } }
     fun time(ms: Long, h24: Boolean) = SimpleDateFormat(if (h24) "HH:mm" else "h:mm a", Locale.getDefault()).format(ms).lowercase()
 }
@@ -183,7 +188,7 @@ class CalWidget : AppWidgetProvider() {
             val mid = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1); set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 5) }.timeInMillis
             var t = mid
             for (e in ev) { if (e.start > now) t = minOf(t, e.start); if (e.end > now) t = minOf(t, e.end) }
-            if ((p.i("prog") == 1 || p.i("live") == 1) && ev.any { it.start <= now && it.end > now && !it.allDay }) t = minOf(t, now + (if (p.i("lint") == 0) 5 else 15) * 60000L)
+            if ((p.i("prog") == 1 || p.i("live") == 1) && ev.any { it.start <= now && it.end > now && !it.allDay }) t = minOf(t, now + (if (p.i("live") == 1 && p.i("tfmt") != 0) 1 else if (p.i("lint") == 0) 5 else 15) * 60000L)
             c.getSystemService(AlarmManager::class.java).setAndAllowWhileIdle(AlarmManager.RTC, maxOf(t, now + 2000), alarmIntent(c))
         }
 
@@ -250,7 +255,10 @@ class ListService : RemoteViewsService() {
     override fun onGetViewFactory(i: Intent): RemoteViewsFactory = Factory(applicationContext, i.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0))
 }
 
-fun RemoteViews.bar2(track: Int, fill: Int, pct: Int, tc: Int, fc: Int) {
+fun RemoteViews.bar2(track: Int, fill: Int, pct: Int, tc: Int, fc: Int, shape: Int = 0, box: Int = 0, hDp: Int = 0) {
+    setImageViewResource(track, intArrayOf(R.drawable.pill, R.drawable.soft, R.drawable.rect)[shape])
+    setImageViewResource(fill, intArrayOf(R.drawable.clip_pill, R.drawable.clip_soft, R.drawable.clip_rect)[shape])
+    if (box != 0 && hDp > 0 && Build.VERSION.SDK_INT >= 31) setViewLayoutHeight(box, hDp.toFloat(), TypedValue.COMPLEX_UNIT_DIP)
     setInt(track, "setColorFilter", tc or 0xFF000000.toInt()); setInt(track, "setImageAlpha", Color.alpha(tc))
     setInt(fill, "setColorFilter", fc or 0xFF000000.toInt()); setInt(fill, "setImageLevel", pct.coerceIn(0, 100) * 100)
 }
@@ -303,26 +311,32 @@ object Live {
         val evCol = (if (rule != null && p.i("kwc") == 1) rule.color else e.color) or 0xFF000000.toInt()
         val mode = p.i("ncol")
         val bgc = when (mode) { 1 -> evCol; 2 -> p.i("acc") or 0xFF000000.toInt(); else -> 0xFF1C1C21.toInt() }
-        val barCol = if (mode == 0) p.i("acc") or 0xFF000000.toInt() else Color.WHITE
+        var barCol = (when (p.i("nbc")) { 0 -> p.i("acc"); 1 -> evCol; 3 -> p.i("nbcc"); else -> Color.WHITE }) or 0xFF000000.toInt()
+        if (barCol == bgc) barCol = Color.WHITE
+        val hDp = intArrayOf(4, 8, 12, 16)[p.i("nbh")]; val tf = p.i("tfmt"); val lab = p.i("tlab")
         val soft = 0xCCFFFFFF.toInt()
         val range = "${Repo.time(e.start, h24)} - ${Repo.time(e.end, h24)}"
         fun paint(r: RemoteViews, big: Boolean) {
             r.setInt(R.id.nb_bg, "setColorFilter", bgc); r.setInt(R.id.nb_bg, "setImageAlpha", 255)
             r.setTextViewText(R.id.nb_t, e.title); r.setTextColor(R.id.nb_t, Color.WHITE)
-            r.setChronometer(R.id.nb_c, SystemClock.elapsedRealtime() + (e.end - now), null, true)
-            r.setChronometerCountDown(R.id.nb_c, true); r.setTextColor(R.id.nb_c, Color.WHITE)
-            r.setViewVisibility(R.id.nb_bar, if (showBar) View.VISIBLE else View.GONE)
-            r.bar2(R.id.nb_btrack, R.id.nb_bfill, pct, 0x55FFFFFF, barCol)
+            r.setViewVisibility(R.id.nb_c, if (tf == 0) View.VISIBLE else View.GONE)
+            r.setViewVisibility(R.id.nb_r, if (tf == 0) View.GONE else View.VISIBLE)
+            if (tf == 0) {
+                r.setChronometer(R.id.nb_c, SystemClock.elapsedRealtime() + (e.end - now), "%s" + arrayOf(" left", " remaining", "")[lab], true)
+                r.setChronometerCountDown(R.id.nb_c, true); r.setTextColor(R.id.nb_c, Color.WHITE)
+            } else { r.setTextViewText(R.id.nb_r, Repo.remain(e.end - now, tf, lab)); r.setTextColor(R.id.nb_r, Color.WHITE) }
+            r.setViewVisibility(R.id.nb_row, if (showBar) View.VISIBLE else View.GONE)
+            r.bar2(R.id.nb_btrack, R.id.nb_bfill, pct, 0x55FFFFFF, barCol, p.i("nbr"), R.id.nb_bar, hDp)
+            r.setViewVisibility(R.id.nb_p, if (p.i("npct") == 1) View.VISIBLE else View.GONE)
+            r.setTextViewText(R.id.nb_p, "$pct%"); r.setTextColor(R.id.nb_p, Color.WHITE)
             if (big) {
                 r.setTextViewText(R.id.nb_s, range); r.setTextColor(R.id.nb_s, soft)
-                r.setViewVisibility(R.id.nb_p, if (showBar && p.i("npct") == 1) View.VISIBLE else View.GONE)
-                r.setTextViewText(R.id.nb_p, "$pct%"); r.setTextColor(R.id.nb_p, Color.WHITE)
                 val nx = if (p.i("nnext") == 1 && next != null) "Next · ${next.title} at ${Repo.time(next.start, h24)}" else ""
                 r.setViewVisibility(R.id.nb_next, if (nx.isEmpty()) View.GONE else View.VISIBLE)
                 r.setTextViewText(R.id.nb_next, nx); r.setTextColor(R.id.nb_next, soft)
             }
         }
-        val b = Notification.Builder(c, chan).setSmallIcon(R.drawable.ic_t_events).setContentTitle(e.title).setContentText("$range  •  $pct%")
+        val b = Notification.Builder(c, chan).setSmallIcon(R.drawable.ic_t_events).setContentTitle(e.title).setContentText("${Repo.remain(e.end - now, if (tf == 2) 2 else 1, lab)}  •  $pct%")
             .setStyle(Notification.DecoratedCustomViewStyle()).setCustomContentView(RemoteViews(c.packageName, R.layout.notif_small).also { paint(it, false) })
             .setOngoing(true).setOnlyAlertOnce(true).setShowWhen(false).setTimeoutAfter(maxOf(e.end - now, 1000L)).setCategory(Notification.CATEGORY_PROGRESS)
             .setColor(evCol).setVisibility(if (lock) Notification.VISIBILITY_PUBLIC else Notification.VISIBILITY_PRIVATE)
@@ -402,7 +416,7 @@ class Factory(private val c: Context, private val wid: Int) : RemoteViewsService
         val rule = Rules.match(Rules.load(p), e.title)
         val col = if (rule != null && p.i("kwc") == 1) rule.color else e.color
         fun a(col: Int) = (col and 0xFFFFFF) or ((Color.alpha(col) * dim).toInt() shl 24)
-        val badge = when { e.allDay || ended -> null; live -> "${Repo.fmt(e.end - now)} left"; next -> "in ${Repo.fmt(e.start - now)}"; else -> Repo.fmt(e.end - e.start) }
+        val badge = when { e.allDay || ended -> null; live -> Repo.remain(e.end - now, if (p.i("tfmt") == 2) 2 else 1, p.i("tlab")); next -> "in ${Repo.fmt(e.start - now)}"; else -> Repo.fmt(e.end - e.start) }
         val range = if (e.allDay) "All day" else "${Repo.time(e.start, h24)} - ${Repo.time(e.end, h24)}"
         val gap = (p.i("gap") * c.resources.displayMetrics.density).toInt()
         return RemoteViews(c.packageName, ITEMS[p.i("font")]).apply {

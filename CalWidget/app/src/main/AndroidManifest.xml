@@ -1,15 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.READ_CALENDAR"/>
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <queries><package android:name="com.cron.calendar"/></queries>
     <application android:label="Calendar Widget" android:icon="@mipmap/ic_launcher"
-        android:theme="@android:style/Theme.DeviceDefault">
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
         <activity android:name=".SettingsActivity" android:exported="true">
             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
         </activity>
+        <activity android:name=".WidgetSettings" android:exported="false" android:taskAffinity="app.calwidget.widgetcfg"/>
         <activity android:name=".Month" android:exported="false" android:theme="@android:style/Theme.DeviceDefault.Dialog"/>
         <activity android:name=".Open" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar"/>
         <receiver android:name=".CalWidget" android:exported="true">

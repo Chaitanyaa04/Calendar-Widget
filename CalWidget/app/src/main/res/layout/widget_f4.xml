@@ -11,6 +11,16 @@
             <ImageView android:id="@+id/add" android:layout_width="34dp" android:layout_height="34dp" android:padding="6dp" android:src="@android:drawable/ic_input_add"/>
             <ImageView android:id="@+id/cfg" android:layout_width="34dp" android:layout_height="34dp" android:padding="6dp" android:src="@android:drawable/ic_menu_preferences"/>
         </LinearLayout>
+        <LinearLayout android:id="@+id/chips" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:orientation="horizontal">
+            <FrameLayout android:id="@+id/stWrap" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp">
+                <ImageView android:id="@+id/stPill" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:src="@drawable/pill"/>
+                <TextView android:fontFamily="casual" android:id="@+id/st" android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingLeft="10dp" android:paddingRight="10dp" android:paddingTop="3dp" android:paddingBottom="3dp" android:textSize="11sp" android:textStyle="bold" android:singleLine="true"/>
+            </FrameLayout>
+            <FrameLayout android:id="@+id/frWrap" android:layout_width="wrap_content" android:layout_height="wrap_content">
+                <ImageView android:id="@+id/frPill" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:src="@drawable/pill"/>
+                <TextView android:fontFamily="casual" android:id="@+id/fr" android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingLeft="10dp" android:paddingRight="10dp" android:paddingTop="3dp" android:paddingBottom="3dp" android:textSize="11sp" android:textStyle="bold" android:singleLine="true"/>
+            </FrameLayout>
+        </LinearLayout>
         <FrameLayout android:id="@+id/dayp" android:layout_width="match_parent" android:layout_height="3dp" android:layout_marginTop="6dp">
             <ImageView android:id="@+id/dtrack" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:src="@drawable/pill"/>
             <ImageView android:id="@+id/dfill" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:src="@drawable/clip_pill"/>

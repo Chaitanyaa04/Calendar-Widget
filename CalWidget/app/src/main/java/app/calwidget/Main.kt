@@ -31,7 +31,7 @@ import java.util.*
 
 private val DEF = mapOf(
     "bg" to 0xFF000000.toInt(), "title" to 0xFFE6E6E6.toInt(), "sub" to 0xFFBDBDBD.toInt(), "acc" to 0xFFFF4081.toInt(),
-    "size" to 20, "bopa" to 14, "round" to 1, "gap" to 3, "tap" to 0, "icons" to 1, "ended" to 1, "dfmt" to 0, "app" to 0, "rem" to 0, "lead" to 1, "auto" to 0, "live" to 0, "lint" to 1, "kwc" to 1, "sumr" to 1, "free" to 1, "freemin" to 60, "dayp" to 1, "wake" to 6, "sleep" to 23, "font" to 0, "dtap" to 1, "morn" to 0, "mornh" to 7, "pin" to 1, "days" to 7, "tfmt" to 0, "tlab" to 0, "nbh" to 2, "nbhc" to 2, "nbr" to 0, "nbc" to 0, "nbcc" to 0xFFFFFFFF.toInt(), "nstyle" to 1, "ncol" to 0, "npct" to 1, "nnext" to 1, "nprio" to 1, "nlock" to 1, "h24" to 0, "bar" to 1, "prog" to 1
+    "size" to 20, "bopa" to 14, "round" to 1, "gap" to 3, "tap" to 0, "icons" to 1, "ended" to 1, "dfmt" to 0, "app" to 0, "rem" to 0, "lead" to 1, "auto" to 0, "live" to 0, "lint" to 1, "kwc" to 1, "sumr" to 1, "free" to 1, "freemin" to 60, "dayp" to 1, "wake" to 6, "sleep" to 23, "font" to 0, "dtap" to 1, "morn" to 0, "mornh" to 7, "pin" to 1, "days" to 7, "bref" to 1, "badd" to 1, "bcfg" to 1, "anch" to 1, "tfmt" to 0, "tlab" to 0, "nbh" to 2, "nbhc" to 2, "nbr" to 0, "nbc" to 0, "nbcc" to 0xFFFFFFFF.toInt(), "nstyle" to 1, "ncol" to 0, "npct" to 1, "nnext" to 1, "nprio" to 1, "nlock" to 1, "h24" to 0, "bar" to 1, "prog" to 1
 )
 
 val WIDGETS = intArrayOf(R.layout.widget, R.layout.widget_f1, R.layout.widget_f2, R.layout.widget_f3, R.layout.widget_f4)
@@ -200,7 +200,9 @@ class CalWidget : AppWidgetProvider() {
             val tc = p.i("title")
             r.setInt(R.id.bg, "setColorFilter", p.i("bg") or 0xFF000000.toInt())
             r.setInt(R.id.bg, "setImageAlpha", Color.alpha(p.i("bg")))
-            for (v in listOf(R.id.add, R.id.cfg, R.id.ref)) r.setViewVisibility(v, if (p.i("icons") == 1) View.VISIBLE else View.GONE)
+            r.setViewVisibility(R.id.ref, if (p.i("bref") == 1) View.VISIBLE else View.GONE)
+            r.setViewVisibility(R.id.add, if (p.i("badd") == 1) View.VISIBLE else View.GONE)
+            r.setViewVisibility(R.id.cfg, if (p.i("bcfg") == 1) View.VISIBLE else View.GONE)
             r.setInt(R.id.ref, "setColorFilter", tc)
             r.setOnClickPendingIntent(R.id.ref, PendingIntent.getBroadcast(c, 5, Intent(c, CalWidget::class.java).setAction("app.calwidget.SYNC"), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             r.setTextViewText(R.id.date, SimpleDateFormat(DATEFMT[p.i("dfmt")], Locale.getDefault()).format(Date()))
@@ -215,20 +217,52 @@ class CalWidget : AppWidgetProvider() {
                 r.setInt(R.id.cdPill, "setColorFilter", p.i("acc") or 0xFF000000.toInt()); r.setInt(R.id.cdPill, "setImageAlpha", if (d <= 7) 255 else 80)
                 r.setTextColor(R.id.cd, if (d <= 7) Color.WHITE else tc)
             }
+            val td = Repo.load(c, 1); val rules = Rules.load(p); val now0 = System.currentTimeMillis()
+            fun f(ms: Long) = if (ms < 60000) "0m" else Repo.fmt(ms)
+            var stTxt: String? = null; var frTxt: String? = null
+            if (p.i("sumr") == 1 && rules.any { it.study }) {
+                var total = 0L; var done = 0L
+                for (e in td) if (!e.allDay && Rules.match(rules, e.title)?.study == true) { total += e.end - e.start; done += (minOf(e.end, now0) - e.start).coerceAtLeast(0) }
+                if (total > 0) stTxt = "STUDY ${f(done)} / ${f(total)}"
+            }
+            if (p.i("free") == 1) Repo.freeGap(td, p)?.let { frTxt = "FREE ${Repo.time(it.first, p.i("h24") == 1)} · ${Repo.fmt(it.second - it.first)}" }
+            fun chip(wrap: Int, pill: Int, tv: Int, t: String?) {
+                r.setViewVisibility(wrap, if (t != null) View.VISIBLE else View.GONE)
+                if (t != null) { r.setTextViewText(tv, t); r.setTextColor(tv, tc); r.setInt(pill, "setColorFilter", p.i("acc") or 0xFF000000.toInt()); r.setInt(pill, "setImageAlpha", 70) }
+            }
+            chip(R.id.stWrap, R.id.stPill, R.id.st, stTxt); chip(R.id.frWrap, R.id.frPill, R.id.fr, frTxt)
+            r.setViewVisibility(R.id.chips, if (stTxt != null || frTxt != null) View.VISIBLE else View.GONE)
             val span = (p.i("sleep") - p.i("wake")) * 3600000L
             val dp = ((System.currentTimeMillis() - t0 - p.i("wake") * 3600000L) * 100 / span).toInt().coerceIn(0, 100)
             r.setViewVisibility(R.id.dayp, if (p.i("dayp") == 1) View.VISIBLE else View.GONE)
             r.bar(R.id.dtrack, R.id.dfill, dp, p)
             r.setOnClickPendingIntent(R.id.date, if (p.i("dtap") == 1) PendingIntent.getActivity(c, 12, Intent(c, Month::class.java), PendingIntent.FLAG_IMMUTABLE) else open(c, 1) {})
-            val g = Repo.freeGap(Repo.load(c, 1), p)
+            val g = Repo.freeGap(td, p)
             r.setOnClickPendingIntent(R.id.add, open(c, 2) {
                 putExtra("new", true)
                 if (g != null) { val b = (g.first + 899999) / 900000 * 900000; putExtra("gb", b); putExtra("ge", minOf(g.second, b + 3600000L).coerceAtLeast(b + 900000L)) }
             })
-            r.setOnClickPendingIntent(R.id.cfg, PendingIntent.getActivity(c, 100 + id, Intent(c, SettingsActivity::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id), PendingIntent.FLAG_IMMUTABLE))
+            r.setOnClickPendingIntent(R.id.cfg, PendingIntent.getActivity(c, 100 + id, Intent(c, WidgetSettings::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK), PendingIntent.FLAG_IMMUTABLE))
             if (!preview) {
                 r.setRemoteAdapter(R.id.list, Intent(c, ListService::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id).apply { data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME)) })
                 r.setPendingIntentTemplate(R.id.list, PendingIntent.getActivity(c, 4, Intent(c, Open::class.java), PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+                // Keep the current event pinned near the top: earlier events sit above and appear when you scroll up.
+                if (p.i("anch") == 1 && p.i("ended") == 1) {
+                    val rs = buildRows(c, p).rows; val now = System.currentTimeMillis(); val a = anchorIndex(rs, now)
+                    if (a > 0) {
+                        val hdp = AppWidgetManager.getInstance(c).getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 300)
+                        val room = hdp - 72 - (if (stTxt != null || frTxt != null) 28 else 0) - (if (p.i("dayp") == 1) 9 else 0)
+                        val sz = p.i("size"); val gp = p.i("gap")
+                        fun hh(row: Any): Int = when {
+                            row === NowLine -> 10
+                            row is Ev -> (2 * gp + 16 + sz * 1.25 + sz * 0.9 + (if (row.start <= now && row.end > now && !row.allDay && p.i("prog") == 1) 11 else 0)).toInt()
+                            else -> 26
+                        }
+                        var t = a; var used = 0
+                        while (t < rs.size) { used += hh(rs[t]); if (used > room) break; t++ }
+                        r.setScrollPosition(R.id.list, maxOf(a, minOf(t - 1, rs.size - 1)))
+                    }
+                }
             }
             return r
         }
@@ -350,6 +384,36 @@ object Live {
 
 object NowLine
 
+class RowSet(val rows: List<Any>, val nextStart: Long)
+
+fun buildRows(c: Context, p: Prefs): RowSet {
+    val now = System.currentTimeMillis()
+    if (c.checkSelfPermission(android.Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) return RowSet(listOf("OPEN THE APP AND ALLOW CALENDAR ACCESS"), -1L)
+    val day = SimpleDateFormat("yyyyMMdd", Locale.US)
+    val today = day.format(now); val tomorrow = day.format(now + 86400000L)
+    val evs = Repo.load(c, p.i("days")).filter { p.i("ended") == 1 || it.end > now }
+    val out = ArrayList<Any>(); var last = ""; var line = false
+    fun flush() { if (!line && last == today) { out.add(NowLine); line = true } }
+    for (e in evs) {
+        val ref = maxOf(e.start, now); val k = day.format(ref)
+        if (k != last) {
+            flush(); last = k
+            out.add(when (k) { today -> "TODAY"; tomorrow -> "TOMORROW"; else -> SimpleDateFormat("EEE, MMM d", Locale.getDefault()).format(ref).uppercase() })
+        }
+        if (k == today && !line && e.start > now) { out.add(NowLine); line = true }
+        out.add(e)
+    }
+    flush()
+    return RowSet(out, evs.firstOrNull { it.start > now && !it.allDay }?.start ?: -1L)
+}
+
+fun anchorIndex(rows: List<Any>, now: Long): Int {
+    val live = rows.indexOfFirst { it is Ev && it.start <= now && it.end > now && !it.allDay }
+    if (live >= 0) return live
+    val nl = rows.indexOf(NowLine)
+    return if (nl >= 0) nl else 0
+}
+
 class Factory(private val c: Context, private val wid: Int) : RemoteViewsService.RemoteViewsFactory {
     private var rows = listOf<Any>()
     private var nextStart = -1L
@@ -358,49 +422,7 @@ class Factory(private val c: Context, private val wid: Int) : RemoteViewsService
     override fun onDataSetChanged() {
         try { build() } catch (e: Exception) { Prefs(c).putS("err", e.toString().take(160)); rows = listOf("COULDN'T LOAD EVENTS - OPEN THE APP, MORE, HEALTH") }
     }
-    private fun build() {
-        val p = Prefs(c, wid); val now = System.currentTimeMillis()
-        if (c.checkSelfPermission(android.Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) { rows = listOf("OPEN THE APP AND ALLOW CALENDAR ACCESS"); return }
-        val day = SimpleDateFormat("yyyyMMdd", Locale.US)
-        val today = day.format(now); val tomorrow = day.format(now + 86400000L)
-        val all = Repo.load(c, p.i("days"))
-        val evs = all.filter { p.i("ended") == 1 || it.end > now }
-        nextStart = evs.firstOrNull { it.start > now && !it.allDay }?.start ?: -1L
-        val out = ArrayList<Any>(); var last = ""; var line = false
-        val h24 = p.i("h24") == 1
-        val t0 = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }.timeInMillis
-        fun f(ms: Long) = if (ms < 60000) "0m" else Repo.fmt(ms)
-        val rules = Rules.load(p)
-        if (p.i("sumr") == 1 && rules.any { it.study }) {
-            var total = 0L; var done = 0L
-            for (e in all) if (!e.allDay && e.start < t0 + 86400000L && e.end > t0 && Rules.match(rules, e.title)?.study == true) {
-                total += e.end - e.start; done += (minOf(e.end, now) - e.start).coerceAtLeast(0)
-            }
-            if (total > 0) out.add(Summary("STUDY  ${f(done)} done · ${f(total - done)} left · ${f(total)} planned"))
-        }
-        if (p.i("free") == 1) {
-            val need = p.i("freemin") * 60000L; val dEnd = t0 + p.i("sleep") * 3600000L
-            var cur = maxOf(now, t0 + p.i("wake") * 3600000L); var gap: Pair<Long, Long>? = null
-            for (b in all.filter { !it.allDay && it.end > cur && it.start < dEnd }.sortedBy { it.start }) {
-                if (b.start - cur >= need) { gap = cur to b.start; break }
-                cur = maxOf(cur, b.end)
-            }
-            if (gap == null && dEnd - cur >= need) gap = cur to dEnd
-            gap?.let { out.add(Summary("FREE  ${Repo.time(it.first, h24)} - ${Repo.time(it.second, h24)} (${Repo.fmt(it.second - it.first)})")) }
-        }
-        fun flush() { if (!line && last == today) { out.add(NowLine); line = true } }
-        for (e in evs) {
-            val ref = maxOf(e.start, now); val k = day.format(ref)
-            if (k != last) {
-                flush(); last = k
-                out.add(when (k) { today -> "TODAY"; tomorrow -> "TOMORROW"; else -> SimpleDateFormat("EEE, MMM d", Locale.getDefault()).format(ref).uppercase() })
-            }
-            if (k == today && !line && e.start > now) { out.add(NowLine); line = true }
-            out.add(e)
-        }
-        flush()
-        rows = out
-    }
+    private fun build() { val rs = buildRows(c, Prefs(c, wid)); rows = rs.rows; nextStart = rs.nextStart }
     override fun getCount() = rows.size
     override fun getViewAt(i: Int): RemoteViews = try { make(i) } catch (e: Exception) {
         RemoteViews(c.packageName, R.layout.hdr).apply { setTextViewText(R.id.h, "ERROR - OPEN THE APP, MORE, HEALTH") }

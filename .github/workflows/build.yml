@@ -7,9 +7,14 @@ on:
       - master
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   apk:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,14 +32,38 @@ jobs:
 
       - name: Build debug APK
         run: |
-          ls -R | head -40
-          F=$(find . -name settings.gradle.kts | head -1)
-          echo "Found project file: $F"
-          cd "$(dirname "$F")"
+          D=$(dirname "$(find . -name settings.gradle.kts | head -1)")
+          cd "$D"
           gradle assembleDebug --stacktrace
 
-      - name: Upload APK
+      - name: Collect APK
+        run: |
+          D=$(dirname "$(find . -name settings.gradle.kts | head -1)")
+          cp "$D/app/build/outputs/apk/debug/app-debug.apk" CalWidget.apk
+          ls -l CalWidget.apk
+
+      - name: Save APK with this run
         uses: actions/upload-artifact@v4
         with:
           name: CalWidget-apk
-          path: "**/build/outputs/apk/debug/*.apk"
+          path: CalWidget.apk
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete "v${{ github.run_number }}" --repo "${{ github.repository }}" --yes --cleanup-tag || true
+          gh release create "v${{ github.run_number }}" CalWidget.apk \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "Build ${{ github.run_number }}" \
+            --notes "Automatic build ${{ github.run_number }}" \
+            --latest
+
+      - name: Keep only the 2 newest releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release list --repo "${{ github.repository }}" --limit 100 --json tagName,createdAt --jq 'sort_by(.createdAt) | reverse | .[2:] | .[].tagName' | while read t; do
+            gh release delete "$t" --repo "${{ github.repository }}" --yes --cleanup-tag || true
+          done

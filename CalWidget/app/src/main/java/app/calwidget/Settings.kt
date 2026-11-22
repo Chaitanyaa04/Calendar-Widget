@@ -68,10 +68,10 @@ open class SettingsActivity : Activity() {
         return box
     }
 
-    private fun more(c: LinearLayout, title: String = "More options"): LinearLayout {
+    private fun more(c: LinearLayout, title: String, hint: String = ""): LinearLayout {
         val arrow = tx("▾", 18f, SUB)
         val head = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; background = rr(CARD, 20); setPadding(dp(18), dp(14), dp(18), dp(14)) }
-        head.addView(tx(title, 15f, TXT, true), lp(0, -2, 1f)); head.addView(arrow)
+        head.addView(texts(title, hint.ifEmpty { null }), lp(0, -2, 1f)); head.addView(arrow)
         val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
         head.setOnClickListener { val open = body.visibility == View.GONE; body.visibility = if (open) View.VISIBLE else View.GONE; arrow.text = if (open) "▴" else "▾" }
         c.addView(head, lp().apply { setMargins(0, dp(6), 0, dp(10)) }); c.addView(body)
@@ -248,6 +248,7 @@ open class SettingsActivity : Activity() {
         super.onCreate(b)
         actionBar?.hide()
         wid = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0); p = Prefs(this, wid)
+        if (wid != 0) setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, wid))
         window.statusBarColor = BG; window.navigationBarColor = BG
         if (checkSelfPermission(android.Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED)
             requestPermissions(arrayOf(android.Manifest.permission.READ_CALENDAR), 1)
@@ -262,7 +263,7 @@ open class SettingsActivity : Activity() {
 
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(BG) }
         val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(22), dp(18), dp(22), 0) }
-        top.addView(tx(if (g) "CALENDAR WIDGET  ·  DEFAULTS" else "THIS WIDGET ONLY", 11f, ACC, true).apply { letterSpacing = 0.14f }, lp(0, -2, 1f))
+        top.addView(tx(if (g) "CALENDAR WIDGET  ·  DEFAULTS" else (Prefs(this, wid).s("wname").ifBlank { "This widget" }.uppercase() + " ONLY"), 11f, ACC, true).apply { letterSpacing = 0.14f }, lp(0, -2, 1f))
         if (!g) top.addView(tx("All settings  ›", 12f, SUB, true).apply {
             setPadding(dp(8), dp(4), 0, dp(4))
             setOnClickListener { startActivity(Intent(this@SettingsActivity, SettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)); finish() }
@@ -321,8 +322,42 @@ open class SettingsActivity : Activity() {
     }
 
     // ---------- pages ----------
+    private fun widgetsCard(c: LinearLayout) {
+        val m = AppWidgetManager.getInstance(this)
+        val ids = m.getAppWidgetIds(ComponentName(this, CalWidget::class.java)).sorted()
+        val box = card(c, "Your widgets")
+        if (ids.isEmpty()) {
+            box.addView(tx("None on your home screen yet. Long-press the home screen, tap Widgets, and add Calendar Widget.", 13f, SUB).apply { setPadding(0, dp(8), 0, dp(8)) })
+            return
+        }
+        ids.forEachIndexed { i, id ->
+            val o = m.getAppWidgetOptions(id)
+            val cw = ((o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250) + 30) / 70).coerceAtLeast(1)
+            val ch = ((o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 250) + 30) / 70).coerceAtLeast(1)
+            val name = Prefs(this, id).s("wname").ifBlank { "Widget ${i + 1}" }
+            val row = LinearLayout(this).apply {
+                gravity = Gravity.CENTER_VERTICAL; setPadding(0, dp(12), 0, dp(12))
+                setOnClickListener { startActivity(Intent(this@SettingsActivity, WidgetSettings::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)) }
+                setOnLongClickListener { renameWidget(id, i + 1); true }
+            }
+            row.addView(texts(name, "About $cw × $ch  ·  tap to customise, hold to rename"), lp(0, -2, 1f)); row.addView(tx("›", 22f, SUB))
+            box.addView(row)
+        }
+    }
+
+    private fun renameWidget(id: Int, n: Int) {
+        val et = EditText(this).apply {
+            setSingleLine(); setText(Prefs(this@SettingsActivity, id).s("wname")); hint = "Widget $n"
+            setTextColor(TXT); setHintTextColor(SUB); background = rr(CARD2, 12); setPadding(dp(14), dp(10), dp(14), dp(10))
+        }
+        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle("Name this widget").setView(et)
+            .setPositiveButton("Save") { _, _ -> Prefs(this, id).putS("wname", et.text.toString().trim()); recreate() }
+            .setNegativeButton("Cancel", null).show()
+    }
+
     private fun stylePage(c: LinearLayout) {
-        header(c, "Look", "Make it yours in a few taps")
+        header(c, "Look", if (wid == 0) "Colours and style for every widget. Pick a widget below to style it on its own." else "Colours and style for this widget only")
+        if (wid == 0) widgetsCard(c)
         val t = card(c, "Theme")
         val row = LinearLayout(this)
         listOf("OLED", "Dark", "Light", "You").forEachIndexed { i, n ->
@@ -339,26 +374,30 @@ open class SettingsActivity : Activity() {
         colorRow(k, "Accent", "acc"); colorRow(k, "Background", "bg")
         val b = card(c, "Event blocks")
         slider(b, "Opacity", "bopa", 0, 100, "%"); seg(b, "Corners", "round", listOf("Square", "Soft", "Round"))
-        val m = more(c, "Fine-tune")
-        val k2 = card(m, "More colours"); colorRow(k2, "Title text", "title"); colorRow(k2, "Time text", "sub")
-        val x = card(m, "Text and spacing")
-        slider(x, "Text size", "size", 12, 28, " sp"); slider(x, "Spacing", "gap", 0, 12, " dp"); seg(x, "Font", "font", listOf("Sans", "Narrow", "Serif", "Mono", "Fun"))
+        val mc = more(c, "More colours", "Title and time text")
+        val k2 = card(mc, "Text colours"); colorRow(k2, "Title text", "title"); colorRow(k2, "Time text", "sub")
+        val mt = more(c, "Text and spacing", "Size, font and space between events")
+        val x = card(mt, "Text")
+        slider(x, "Size", "size", 12, 28, " sp"); seg(x, "Font", "font", listOf("Sans", "Narrow", "Serif", "Mono", "Fun")); slider(x, "Space between events", "gap", 0, 12, " dp")
         if (wid != 0) card(c, "This widget").addView(button("Reset to default look", false) { p.resetWidget(); CalWidget.refresh(this); recreate() })
     }
 
     private fun eventsPage(c: LinearLayout) {
-        header(c, "Agenda", "What the widget shows")
+        header(c, "Agenda", "What the widget shows and how it behaves")
         if (wid == 0) cals(c)
         val a = card(c, "Events")
         slider(a, "Days shown", "days", 1, 14, " days")
-        toggle(a, "Keep current event in view", "Earlier ones sit above, scroll up to see them", "anch")
-        toggle(a, "Show finished events", "Dimmed", "ended")
-        val h = card(c, "Header buttons")
-        toggle(h, "Refresh", null, "bref"); toggle(h, "Add event", null, "badd"); toggle(h, "Settings gear", "If hidden, open settings from the app icon", "bcfg")
-        val m = more(c)
-        val d = card(m, "Display")
+        toggle(a, "Show finished events", "Dimmed, above the current one", "ended")
+        val f = card(c, "Current event")
+        toggle(f, "Keep it in view", "Earlier events sit above, scroll up to see them", "anch")
+        toggle(f, "Bring it back", "Returns to it after you scroll away or leave the home screen", "refocus")
+        seg(f, "Return after", "rtime", listOf("2 min", "5 min", "15 min"))
+        val d = card(c, "Display")
         toggle(d, "Calendar colour bar", null, "bar"); toggle(d, "Progress on current event", null, "prog"); toggle(d, "24-hour time", null, "h24")
         seg(d, "Date format", "dfmt", listOf("Wednesday, Nov 18", "Wed, 18 Nov", "Wed, 18 Nov · W47", "Wednesday 18 November"))
+        val h = card(c, "Header buttons")
+        toggle(h, "Refresh", "Also jumps back to the current event", "bref"); toggle(h, "Add event", null, "badd"); toggle(h, "Settings gear", "If hidden, open settings from the app icon", "bcfg")
+        val m = more(c, "Taps and links", "What tapping the date or an event does")
         val t = card(m, "Taps")
         seg(t, "Tap the date", "dtap", listOf("Open calendar", "Month view")); seg(t, "Tap an event", "tap", listOf("Open", "Day", "Nothing")); seg(t, "Open with", "app", listOf("Google", "Notion"))
     }
@@ -379,17 +418,19 @@ open class SettingsActivity : Activity() {
     }
 
     private fun alertsPage(c: LinearLayout) {
-        header(c, "Alerts", "Notifications, kept simple")
+        header(c, "Alerts", "Reminders, the live card and your morning briefing")
         val r = card(c, "Reminders")
         toggle(r, "Notify before events", "Needs notification permission", "rem") { if (it) askReminderPerms() }
         seg(r, "How early", "lead", listOf("5 min", "10 min", "15 min", "30 min"))
         val l = card(c, "Live notification")
         toggle(l, "Show the current event", "Progress card with time remaining", "live") { if (it) askNotif() }
+        toggle(l, "Show on lock screen", "Your phone's lock-screen setting must also allow it", "nlock")
+        toggle(l, "Keep pinned", "Comes back if swiped away", "pin")
         l.addView(button("Send a preview", false) { askNotif(); Live.demo(this, p) })
         val m = card(c, "Morning briefing")
         toggle(m, "Daily summary", "Today's events as a notification", "morn") { if (it) askNotif() }
         slider(m, "Send at", "mornh", 5, 10, ":00")
-        val s = more(c, "Notification style")
+        val s = more(c, "Notification style", "Layout, colours, time format and progress bar")
         val cd = card(s, "Card")
         seg(cd, "Layout", "nstyle", listOf("Compact", "Detailed")); seg(cd, "Colour", "ncol", listOf("Dark", "Event", "Accent"))
         toggle(cd, "Show next event", "Detailed layout only", "nnext")
@@ -400,9 +441,8 @@ open class SettingsActivity : Activity() {
         seg(bc, "Compact thickness", "nbhc", listOf("Medium", "Thick", "XL", "Max")); seg(bc, "Expanded thickness", "nbh", listOf("Thin", "Medium", "Thick", "XL"))
         seg(bc, "Shape", "nbr", listOf("Round", "Soft", "Square")); seg(bc, "Colour", "nbc", listOf("Accent", "Event", "White", "Custom"))
         colorRow(bc, "Custom colour", "nbcc"); toggle(bc, "Show percentage", "Beside the bar", "npct")
-        val v = card(s, "Visibility")
-        seg(v, "Priority", "nprio", listOf("Quiet", "Prominent")); toggle(v, "Show on lock screen", "Your phone's setting must also allow it", "nlock")
-        toggle(v, "Keep pinned", "Comes back if swiped away", "pin"); seg(v, "Refresh progress", "lint", listOf("5 min", "15 min"))
+        val v = card(s, "Delivery")
+        seg(v, "Priority", "nprio", listOf("Quiet", "Prominent")); seg(v, "Refresh progress", "lint", listOf("5 min", "15 min"))
     }
 
     // ---------- rules ----------
@@ -451,17 +491,19 @@ open class SettingsActivity : Activity() {
     }
 
     private fun studyPage(c: LinearLayout) {
-        header(c, "Study", "Chips shown under the header")
-        val s = card(c, "Info chips")
-        toggle(s, "Study hours", "Done / planned today, from rules marked as study", "sumr")
-        toggle(s, "Next free slot", null, "free"); toggle(s, "Day progress bar", null, "dayp")
-        val cd = card(c, "Countdown")
+        header(c, "Study", "Planning chips and your exam countdown")
+        val s = card(c, "Under the header")
+        toggle(s, "Study hours", "Done / planned today, from rules marked as study time", "sumr")
+        toggle(s, "Next free slot", "Your next gap between events", "free")
+        toggle(s, "Day progress bar", "How much of your day has passed", "dayp")
+        val cd = card(c, "Exam countdown")
         field(cd, "Label, e.g. CA Inter", "cdl")
         val db = button("") { pickDate() }; dateBtn = db; dateLabel()
         cd.addView(db); cd.addView(button("Clear countdown", false) { p.putL("cdt", 0); CalWidget.refresh(this); dateLabel(); preview() })
-        val m = more(c, "Fine-tune")
+        cd.addView(tx("Shown as a badge in the header corner.", 12f, SUB).apply { setPadding(0, dp(4), 0, dp(4)) })
+        val m = more(c, "Free slot and day hours", "Minimum free slot, when your day starts and ends")
         val f = card(m, "Free slot"); slider(f, "Minimum length", "freemin", 30, 180, " min")
-        val d = card(m, "Day"); slider(d, "Day starts", "wake", 0, 12, ":00"); slider(d, "Day ends", "sleep", 13, 24, ":00")
+        val d = card(m, "Day hours"); slider(d, "Day starts", "wake", 0, 12, ":00"); slider(d, "Day ends", "sleep", 13, 24, ":00")
     }
 
     private fun dateLabel() { dateBtn?.text = if (p.l("cdt") > 0) "Date: " + SimpleDateFormat("d MMM yyyy", Locale.getDefault()).format(p.l("cdt")) else "Pick a date" }

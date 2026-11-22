@@ -31,7 +31,7 @@ import java.util.*
 
 private val DEF = mapOf(
     "bg" to 0xFF000000.toInt(), "title" to 0xFFE6E6E6.toInt(), "sub" to 0xFFBDBDBD.toInt(), "acc" to 0xFFFF4081.toInt(),
-    "size" to 20, "bopa" to 14, "round" to 1, "gap" to 3, "tap" to 0, "icons" to 1, "ended" to 1, "dfmt" to 0, "app" to 0, "rem" to 0, "lead" to 1, "auto" to 0, "live" to 0, "lint" to 1, "kwc" to 1, "sumr" to 1, "free" to 1, "freemin" to 60, "dayp" to 1, "wake" to 6, "sleep" to 23, "font" to 0, "dtap" to 1, "morn" to 0, "mornh" to 7, "pin" to 1, "days" to 7, "bref" to 1, "badd" to 1, "bcfg" to 1, "anch" to 1, "tfmt" to 0, "tlab" to 0, "nbh" to 2, "nbhc" to 2, "nbr" to 0, "nbc" to 0, "nbcc" to 0xFFFFFFFF.toInt(), "nstyle" to 1, "ncol" to 0, "npct" to 1, "nnext" to 1, "nprio" to 1, "nlock" to 1, "h24" to 0, "bar" to 1, "prog" to 1
+    "size" to 20, "bopa" to 14, "round" to 1, "gap" to 3, "tap" to 0, "icons" to 1, "ended" to 1, "dfmt" to 0, "app" to 0, "rem" to 0, "lead" to 1, "auto" to 0, "live" to 0, "lint" to 1, "kwc" to 1, "sumr" to 1, "free" to 1, "freemin" to 60, "dayp" to 1, "wake" to 6, "sleep" to 23, "font" to 0, "dtap" to 1, "morn" to 0, "mornh" to 7, "pin" to 1, "days" to 7, "refocus" to 1, "rtime" to 1, "bref" to 1, "badd" to 1, "bcfg" to 1, "anch" to 1, "tfmt" to 0, "tlab" to 0, "nbh" to 2, "nbhc" to 2, "nbr" to 0, "nbc" to 0, "nbcc" to 0xFFFFFFFF.toInt(), "nstyle" to 1, "ncol" to 0, "npct" to 1, "nnext" to 1, "nprio" to 1, "nlock" to 1, "h24" to 0, "bar" to 1, "prog" to 1
 )
 
 val WIDGETS = intArrayOf(R.layout.widget, R.layout.widget_f1, R.layout.widget_f2, R.layout.widget_f3, R.layout.widget_f4)
@@ -189,6 +189,9 @@ class CalWidget : AppWidgetProvider() {
             var t = mid
             for (e in ev) { if (e.start > now) t = minOf(t, e.start); if (e.end > now) t = minOf(t, e.end) }
             if ((p.i("prog") == 1 || p.i("live") == 1) && ev.any { it.start <= now && it.end > now && !it.allDay }) t = minOf(t, now + (if (p.i("live") == 1 && p.i("tfmt") != 0) 1 else if (p.i("lint") == 0) 5 else 15) * 60000L)
+            // Android never tells a widget "home screen is visible", so re-focus on a timer. The alarm is non-waking:
+            // if the phone slept past it, it fires the moment the screen turns on.
+            if (p.i("anch") == 1 && p.i("refocus") == 1) t = minOf(t, now + intArrayOf(2, 5, 15)[p.i("rtime")] * 60000L)
             c.getSystemService(AlarmManager::class.java).setAndAllowWhileIdle(AlarmManager.RTC, maxOf(t, now + 2000), alarmIntent(c))
         }
 

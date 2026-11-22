@@ -11,7 +11,9 @@
         <activity android:name=".SettingsActivity" android:exported="true">
             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
         </activity>
-        <activity android:name=".WidgetSettings" android:exported="false" android:taskAffinity="app.calwidget.widgetcfg"/>
+        <activity android:name=".WidgetSettings" android:exported="true" android:taskAffinity="app.calwidget.widgetcfg">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE"/></intent-filter>
+        </activity>
         <activity android:name=".Month" android:exported="false" android:theme="@android:style/Theme.DeviceDefault.Dialog"/>
         <activity android:name=".Open" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar"/>
         <receiver android:name=".CalWidget" android:exported="true">
